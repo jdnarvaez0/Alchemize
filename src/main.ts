@@ -1,8 +1,8 @@
-import { 
-	Plugin, 
-	PluginSettingTab, 
-	Setting, 
-	Notice, 
+import {
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	Notice,
 	TFolder,
 	normalizePath,
 	MarkdownView
@@ -75,7 +75,7 @@ export default class AlchemizePlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log('[WebImporter] Descargando plugin...');
+		console.log('[Alchemize] Descargando plugin...');
 	}
 
 	/**
@@ -163,7 +163,7 @@ export default class AlchemizePlugin extends Plugin {
 	async smartPaste(forcedMode?: ExportMode) {
 		try {
 			const clipboardContent = await navigator.clipboard.readText();
-			
+
 			if (!clipboardContent.trim()) {
 				new Notice('⚗️ El caldero está vacío. Copia contenido primero.');
 				return;
@@ -204,16 +204,16 @@ export default class AlchemizePlugin extends Plugin {
 		}
 
 		// Detectar HTML
-		if (trimmed.includes('<!DOCTYPE') || 
-		    trimmed.includes('<html') ||
-		    (trimmed.includes('<') && trimmed.includes('</') && trimmed.includes('>'))) {
+		if (trimmed.includes('<!DOCTYPE') ||
+			trimmed.includes('<html') ||
+			(trimmed.includes('<') && trimmed.includes('</') && trimmed.includes('>'))) {
 			return 'html';
 		}
 
 		// Detectar Markdown (tiene sintaxis MD típica)
-		if (/^#{1,6}\s/.test(trimmed) || 
-		    /\[.*\]\(.*\)/.test(trimmed) ||
-		    /```[\s\S]*```/.test(trimmed)) {
+		if (/^#{1,6}\s/.test(trimmed) ||
+			/\[.*\]\(.*\)/.test(trimmed) ||
+			/```[\s\S]*```/.test(trimmed)) {
 			return 'markdown';
 		}
 
@@ -259,18 +259,9 @@ export default class AlchemizePlugin extends Plugin {
 			// En un entorno real, necesitaríamos hacer fetch a la URL
 			// Esto tiene limitaciones de CORS en el navegador
 			// Una opción es usar un servidor proxy o una función serverless
-			
-			// Por ahora, mostramos un mensaje informativo
-			new Notice('⚠️ Importación desde URL requiere configuración adicional (CORS)');
-			
-			// Opción alternativa: pedir al usuario que copie el HTML manualmente
-			const shouldCopyHtml = confirm(
-				'Para importar desde URL, copia el contenido HTML de la página (Ctrl+A, Ctrl+C) y usa "Importar desde Clipboard".\n\n¿Deseas continuar con el clipboard?'
-			);
-			
-			if (shouldCopyHtml) {
-				await this.smartPaste(forcedMode);
-			}
+
+			// Informar al usuario que copie el HTML manualmente
+			new Notice('⚗️ Copia el contenido de la página (Ctrl+A, Ctrl+C) y luego usa "Transmutar desde Clipboard"', 5000);
 		} catch (error) {
 			console.error('[Alchemize] Error en la extracción:', error);
 			new Notice('⚠️ No se pudo extraer de la fuente');
@@ -396,7 +387,7 @@ export default class AlchemizePlugin extends Plugin {
 	 */
 	private getAvailableFolders(): string[] {
 		const folders: string[] = ['/'];
-		
+
 		const root = this.app.vault.getRoot();
 		const collectFolders = (folder: TFolder, prefix: string) => {
 			for (const child of folder.children) {
@@ -407,7 +398,7 @@ export default class AlchemizePlugin extends Plugin {
 				}
 			}
 		};
-		
+
 		collectFolders(root, '');
 		return folders.sort();
 	}
@@ -439,23 +430,22 @@ export default class AlchemizePlugin extends Plugin {
 
 			// Generar nombre de archivo
 			const fileName = this.generateFileName(result.title);
-			const filePath = normalizePath(`${result.folder}/${fileName}`);
+			let filePath = normalizePath(`${result.folder}/${fileName}`);
 
 			// Verificar si existe
-			const existingFile = this.app.vault.getAbstractFileByPath(filePath);
-			if (existingFile) {
-				const overwrite = confirm(`El archivo ${fileName} ya existe. ¿Sobrescribir?`);
-				if (!overwrite) return;
+			// Si el archivo ya existe, agregar sufijo numérico
+			let finalPath = filePath;
+			let counter = 1;
+			while (this.app.vault.getAbstractFileByPath(finalPath)) {
+				const baseName = fileName.replace('.md', '');
+				finalPath = normalizePath(`${result.folder}/${baseName}-${counter}.md`);
+				counter++;
 			}
 
-			// Crear o modificar archivo
-			if (existingFile) {
-				await this.app.vault.modify(existingFile as any, finalMarkdown);
-			} else {
-				// Asegurar que existe la carpeta
-				await this.ensureFolder(result.folder);
-				await this.app.vault.create(filePath, finalMarkdown);
-			}
+			// Asegurar que existe la carpeta y crear archivo
+			await this.ensureFolder(result.folder);
+			await this.app.vault.create(finalPath, finalMarkdown);
+			filePath = finalPath;
 
 			// Abrir el archivo
 			const file = this.app.vault.getAbstractFileByPath(filePath);
@@ -494,16 +484,16 @@ export default class AlchemizePlugin extends Plugin {
 		const now = new Date();
 		const date = now.toISOString().split('T')[0];
 		const time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-		
+
 		let fileName = this.settings.filenameTemplate
 			.replace('{{date}}', date)
 			.replace('{{time}}', time)
 			.replace('{{title}}', this.sanitizeFileName(title));
-		
+
 		if (!fileName.endsWith('.md')) {
 			fileName += '.md';
 		}
-		
+
 		return fileName;
 	}
 
@@ -524,7 +514,7 @@ export default class AlchemizePlugin extends Plugin {
 	 */
 	private async ensureFolder(folderPath: string) {
 		if (folderPath === '/' || folderPath === '') return;
-		
+
 		const folder = this.app.vault.getAbstractFileByPath(folderPath);
 		if (!folder) {
 			await this.app.vault.createFolder(folderPath);
@@ -636,12 +626,12 @@ class AlchemizeSettingTab extends PluginSettingTab {
 
 		// Información adicional
 		containerEl.createEl('h3', { text: 'ℹ️ Conocimiento del Laboratorio' });
-		
+
 		const info = containerEl.createDiv('alchemize-info');
-		info.createEl('p', { 
-			text: `Extractores registrados: ${this.plugin.registry.count}` 
+		info.createEl('p', {
+			text: `Extractores registrados: ${this.plugin.registry.count}`
 		});
-		
+
 		const extractorList = info.createEl('ul');
 		this.plugin.registry.getAllExtractors().forEach(extractor => {
 			extractorList.createEl('li', { text: extractor.name });

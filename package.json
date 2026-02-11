@@ -20,16 +20,16 @@
     "study",
     "notes"
   ],
-  "author": "Tu Nombre",
+  "author": "Juan David Narvaez",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tuusuario/alchemize.git"
+    "url": "https://github.com/jdnarvaez0/alchemize.git"
   },
   "bugs": {
-    "url": "https://github.com/tuusuario/alchemize/issues"
+    "url": "https://github.com/jdnarvaez0/alchemize/issues"
   },
-  "homepage": "https://github.com/tuusuario/alchemize#readme",
+  "homepage": "https://github.com/jdnarvaez0/alchemize#readme",
   "devDependencies": {
     "@mozilla/readability": "^0.4.4",
     "@types/jsdom": "^21.1.6",

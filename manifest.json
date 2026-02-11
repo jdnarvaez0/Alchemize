@@ -3,9 +3,8 @@
 	"name": "Alchemize",
 	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
-	"description": "Transforma contenido web en oro puro: notas Markdown estructuradas. Transmuta HTML en conocimiento organizado.",
-	"author": "Tu Nombre",
-	"authorUrl": "https://github.com/tuusuario",
-	"fundingUrl": "https://www.buymeacoffee.com/tuusuario",
+	"description": "Transform web content into structured Markdown notes. Extracts HTML from clipboard or URLs and converts it into clean, organized study notes.",
+	"author": "Juan David Narvaez",
+	"authorUrl": "https://github.com/jdnarvaez0",
 	"isDesktopOnly": false
 }

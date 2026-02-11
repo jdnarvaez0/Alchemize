@@ -3,7 +3,7 @@
 > **Transmuta el contenido web en oro puro: notas Markdown estructuradas en Obsidian**
 
 [![Obsidian Downloads](https://img.shields.io/badge/dynamic/json?color=7e6ad6&label=downloads&query=%24%5B%22alchemize%22%5D.downloads&url=https%3A%2F%2Freleases.obsidian.md%2Fstats%2Fplugin&style=flat-square)](https://obsidian.md/plugins?id=alchemize)
-[![GitHub Release](https://img.shields.io/github/v/release/tuusuario/alchemize?style=flat-square&color=gold)](https://github.com/tuusuario/alchemize/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/jdnarvaez0/alchemize?style=flat-square&color=gold)](https://github.com/jdnarvaez0/alchemize/releases)
 [![License](https://img.shields.io/badge/license-MIT-gold?style=flat-square)](LICENSE)
 
 ```
@@ -12,10 +12,6 @@
     HTML  ──────►  Markdown
     (Plomo)      (Oro)
 ```
-
-<p align="center">
-  <img src="docs/alchemize-demo.gif" alt="Alchemize Demo" width="700">
-</p>
 
 ## ✨ La Transmutación
 
@@ -43,7 +39,7 @@ Alchemize es tu laboratorio digital donde el HTML crudo se transforma en conocim
 
 ```bash
 # Clona el grimorio
-git clone https://github.com/tuusuario/alchemize.git
+git clone https://github.com/jdnarvaez0/alchemize.git
 
 # Entra al laboratorio
 cd alchemize
@@ -66,10 +62,6 @@ Copia `main.js`, `manifest.json` y `styles.css` a tu vault: `.obsidian/plugins/a
 3. **Observa** la previsualización del resultado
 4. **Cristaliza** la nota en tu vault
 
-<p align="center">
-  <img src="docs/transmutation-flow.png" alt="Flujo de Transmutación" width="700">
-</p>
-
 ### Fórmulas Disponibles (Comandos)
 
 | Fórmula | Transmutación | Descripción |
@@ -84,6 +76,7 @@ Copia `main.js`, `manifest.json` y `styles.css` a tu vault: `.obsidian/plugins/a
 ### De AWS Skill Builder a Grimorio de Estudio
 
 **Antes (HTML crudo):**
+
 ```html
 <div class="course-content">
   <h1>DynamoDB Fundamentals</h1>
@@ -98,6 +91,7 @@ Copia `main.js`, `manifest.json` y `styles.css` a tu vault: `.obsidian/plugins/a
 ```
 
 **Después (Oro puro):**
+
 ```markdown
 ---
 title: "AWS Developer - DynamoDB Fundamentals"
@@ -160,7 +154,7 @@ En **Settings** → **Alchemize**:
 
 ```bash
 # Clonar el grimorio
-git clone https://github.com/tuusuario/alchemize.git
+git clone https://github.com/jdnarvaez0/alchemize.git
 cd alchemize
 
 # Preparar componentes
@@ -221,7 +215,7 @@ export class TuFuenteExtractor extends BaseExtractor {
 Si la transmutación falla:
 
 1. Verifica que tienes la última versión
-2. Revisa los [issues existentes](https://github.com/tuusuario/alchemize/issues)
+2. Revisa los [issues existentes](https://github.com/jdnarvaez0/alchemize/issues)
 3. Crea un nuevo issue con:
    - Descripción de la falla
    - Pasos para reproducir
@@ -242,10 +236,4 @@ Licenciado bajo [MIT License](LICENSE) - Libre para transmutar y compartir.
 
 <p align="center">
   <strong>⚗️ Transmuta el conocimiento. Transforma tu aprendizaje. ⚗️</strong>
-</p>
-
-<p align="center">
-  <a href="https://www.buymeacoffee.com/tuusuario" target="_blank">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Invítame un elixir" height="50">
-  </a>
 </p>

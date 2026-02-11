@@ -36,8 +36,8 @@ export class ImageHandler {
 			const image = images[i];
 			try {
 				const processed = await this.processSingleImage(
-					image, 
-					assetsFolder, 
+					image,
+					assetsFolder,
 					`${noteName}-${i + 1}`
 				);
 				processedImages.push(processed);
@@ -93,11 +93,11 @@ export class ImageHandler {
 		// Convertir SVG a PNG si está configurado
 		let finalData = imageData;
 		let finalName = fileName;
-		
+
 		if (this.settings.convertSvgToPng && this.isSvg(mimeType, fileName)) {
 			// TODO: Implementar conversión SVG→PNG con sharp (requiere backend)
 			// Por ahora, guardamos como SVG
-			console.log('[WebImporter] Conversión SVG→PNG pendiente de implementación');
+			console.log('[Alchemize] Conversión SVG→PNG pendiente de implementación');
 		}
 
 		// Guardar archivo en el vault
@@ -116,7 +116,7 @@ export class ImageHandler {
 	private async downloadImage(url: string): Promise<{ data: ArrayBuffer; mimeType?: string }> {
 		// Para URLs relativas, convertir a absolutas
 		const absoluteUrl = this.makeAbsoluteUrl(url);
-		
+
 		try {
 			const response = await fetch(absoluteUrl, {
 				method: 'GET',
@@ -135,7 +135,7 @@ export class ImageHandler {
 
 			return { data, mimeType };
 		} catch (error) {
-			console.error(`[WebImporter] Error descargando ${absoluteUrl}:`, error);
+			console.error(`[Alchemize] Error descargando ${absoluteUrl}:`, error);
 			throw error;
 		}
 	}
@@ -147,11 +147,11 @@ export class ImageHandler {
 		const base64 = dataUrl.split(',')[1];
 		const binaryString = atob(base64);
 		const bytes = new Uint8Array(binaryString.length);
-		
+
 		for (let i = 0; i < binaryString.length; i++) {
 			bytes[i] = binaryString.charCodeAt(i);
 		}
-		
+
 		return bytes.buffer;
 	}
 
@@ -190,7 +190,7 @@ export class ImageHandler {
 		// Limitar extensiones válidas
 		const validExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp'];
 		if (!validExtensions.includes(extension)) {
-		extension = 'png';
+			extension = 'png';
 		}
 
 		// Agregar sufijo descriptivo si es un diagrama
@@ -204,7 +204,7 @@ export class ImageHandler {
 	 */
 	private async ensureAssetsFolder(targetFolder: string): Promise<string> {
 		const assetsPath = normalizePath(`${targetFolder}/${this.settings.imageFolder}`);
-		
+
 		const folder = this.vault.getAbstractFileByPath(assetsPath);
 		if (!folder) {
 			await this.vault.createFolder(assetsPath);
@@ -220,19 +220,19 @@ export class ImageHandler {
 		if (url.startsWith('http://') || url.startsWith('https://')) {
 			return url;
 		}
-		
+
 		// Para URLs relativas, necesitamos el origin
 		// Esto es un fallback - idealmente deberíamos pasar el origin desde el extractor
 		if (url.startsWith('//')) {
 			return `https:${url}`;
 		}
-		
+
 		if (url.startsWith('/')) {
 			// No podemos determinar el dominio base aquí
 			// El extractor debería proporcionar URLs absolutas
 			return url;
 		}
-		
+
 		return url;
 	}
 
@@ -240,9 +240,9 @@ export class ImageHandler {
 	 * Valida si una string es una URL válida
 	 */
 	private isValidUrl(url: string): boolean {
-		return url.startsWith('http://') || 
-		       url.startsWith('https://') || 
-		       url.startsWith('//');
+		return url.startsWith('http://') ||
+			url.startsWith('https://') ||
+			url.startsWith('//');
 	}
 
 	/**
@@ -274,7 +274,7 @@ export class ImageHandler {
 			'image/webp': 'webp',
 			'image/bmp': 'bmp'
 		};
-		
+
 		return mimeType ? mapping[mimeType] : undefined;
 	}
 }

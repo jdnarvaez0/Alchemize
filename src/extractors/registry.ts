@@ -14,7 +14,7 @@ export class ExtractorRegistry {
 	 */
 	register(extractor: BaseExtractor): void {
 		this.extractors.push(extractor);
-		console.log(`[WebImporter] Extractor registrado: ${extractor.name}`);
+		console.log(`[Alchemize] Extractor registrado: ${extractor.name}`);
 	}
 
 	/**
@@ -36,17 +36,17 @@ export class ExtractorRegistry {
 		for (const extractor of this.extractors) {
 			try {
 				if (extractor.canHandle(url, doc)) {
-					console.log(`[WebImporter] Usando extractor: ${extractor.name}`);
+					console.log(`[Alchemize] Usando extractor: ${extractor.name}`);
 					return extractor;
 				}
 			} catch (error) {
-				console.warn(`[WebImporter] Error en extractor ${extractor.name}:`, error);
+				console.warn(`[Alchemize] Error en extractor ${extractor.name}:`, error);
 			}
 		}
 
 		// Usar fallback si está configurado
 		if (this.fallbackExtractor) {
-			console.log(`[WebImporter] Usando extractor fallback: ${this.fallbackExtractor.name}`);
+			console.log(`[Alchemize] Usando extractor fallback: ${this.fallbackExtractor.name}`);
 			return this.fallbackExtractor;
 		}
 

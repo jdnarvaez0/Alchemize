@@ -54,9 +54,9 @@ jobs:
             ---
             **Instalación manual:** Descarga los archivos y cópialos a `.obsidian/plugins/alchemize/`
           files: |
-            main.js
-            manifest.json
-            styles.css
+            dist/main.js
+            dist/manifest.json
+            dist/styles.css
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

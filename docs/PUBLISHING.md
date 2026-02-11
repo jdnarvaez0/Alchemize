@@ -15,7 +15,7 @@
 
 Asegúrate de tener estos archivos en la raíz:
 
-```
+```text
 alchemize/
 ├── manifest.json          # ✅ Metadata del plugin
 ├── main.js               # ✅ Código compilado (OBLIGATORIO)
@@ -34,6 +34,7 @@ alchemize/
 Ya he creado el archivo `.github/workflows/release.yml`. Esto permitirá que cada vez que crees un tag, se compile y publique automáticamente.
 
 **Estructura del workflow:**
+
 ```yaml
 name: Release Alchemize Plugin
 on:
@@ -69,6 +70,7 @@ git push origin v1.1.0
 ```
 
 **¡Listo!** GitHub Actions hará automáticamente:
+
 - ✅ Compilar el código
 - ✅ Crear un Release
 - ✅ Adjuntar `main.js`, `manifest.json`, `styles.css`
@@ -79,14 +81,14 @@ git push origin v1.1.0
 
 #### 4.1 Fork del repositorio oficial
 
-Ve a: https://github.com/obsidianmd/obsidian-releases
+Ve a: <https://github.com/obsidianmd/obsidian-releases>
 
 Haz click en **"Fork"** (arriba a la derecha)
 
 #### 4.2 Clona tu fork
 
 ```bash
-git clone https://github.com/TU-USUARIO/obsidian-releases.git
+git clone https://github.com/jdnarvaez0/obsidian-releases.git
 cd obsidian-releases
 ```
 
@@ -100,9 +102,9 @@ Abre el archivo `community-plugins.json` y agrega tu plugin al final (mantén or
   {
     "id": "alchemize",
     "name": "Alchemize",
-    "author": "Tu Nombre",
+    "author": "Juan David Narvaez",
     "description": "Transmuta contenido web en notas Markdown estructuradas. Ideal para estudiar cursos de AWS, Medium, y documentación técnica.",
-    "repo": "TU-USUARIO/alchemize"
+    "repo": "jdnarvaez0/alchemize"
   }
 ]
 ```
@@ -121,6 +123,7 @@ git push origin master
 2. Click en **"Contribute"** → **"Open pull request"**
 3. Título: `Add Alchemize plugin`
 4. Descripción:
+
    ```markdown
    ## Alchemize
    
