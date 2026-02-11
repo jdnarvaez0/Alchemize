@@ -2,9 +2,8 @@ name: Release Alchemize Plugin
 
 on:
   push:
-    # Se ejecuta cuando creas un tag que empieza con 'v' (ej: v1.0.0)
     tags:
-      - "v*"
+      - "*.*.*"
 
 jobs:
   build:
@@ -38,7 +37,7 @@ jobs:
         with:
           # Usa el tag que disparó el workflow
           tag_name: ${{ github.ref_name }}
-          name: "⚗️ Alchemize ${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
           body: |
             ## ⚗️ Nueva versión de Alchemize
 
