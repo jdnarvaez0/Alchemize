@@ -1,0 +1,11 @@
+{
+	"id": "alchemize",
+	"name": "Alchemize",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Transforma contenido web en oro puro: notas Markdown estructuradas. Transmuta HTML en conocimiento organizado.",
+	"author": "Tu Nombre",
+	"authorUrl": "https://github.com/tuusuario",
+	"fundingUrl": "https://www.buymeacoffee.com/tuusuario",
+	"isDesktopOnly": false
+}
