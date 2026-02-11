@@ -430,10 +430,10 @@ export default class AlchemizePlugin extends Plugin {
 			let finalMarkdown = result.markdown;
 			for (const image of processedImages) {
 				if (image.localPath) {
-					finalMarkdown = finalMarkdown.replace(
-						image.originalUrl,
-						image.localPath
-					);
+					// Crear regex para encontrar la URL en markdown (puede estar en links de imagen)
+					const escapedUrl = image.originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+					const regex = new RegExp(escapedUrl, 'g');
+					finalMarkdown = finalMarkdown.replace(regex, image.localPath);
 				}
 			}
 

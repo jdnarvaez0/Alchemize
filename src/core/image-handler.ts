@@ -42,7 +42,7 @@ export class ImageHandler {
 				);
 				processedImages.push(processed);
 			} catch (error) {
-				console.warn(`[WebImporter] Error procesando imagen ${image.originalUrl}:`, error);
+				console.warn(`[Alchemize] ⚠️ Error capturando esencia visual ${image.originalUrl}:`, error);
 				// Mantener la imagen original si falla la descarga
 				processedImages.push(image);
 			}

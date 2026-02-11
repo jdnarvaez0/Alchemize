@@ -1,5 +1,6 @@
 import { BaseExtractor, ExtractedContent, ImageAsset, ExportMode } from './base';
 import TurndownService from 'turndown';
+import { HTMLProcessor } from '../core/html-processor';
 
 // Readability se importará dinámicamente debido a la compatibilidad con Obsidian
 let Readability: any;
@@ -30,7 +31,7 @@ export class GenericExtractor extends BaseExtractor {
 				const module = await import('@mozilla/readability');
 				Readability = module.Readability;
 			} catch (error) {
-				console.warn('[WebImporter] No se pudo cargar Readability:', error);
+				console.warn('[Alchemize] No se pudo cargar Readability:', error);
 			}
 		}
 	}
@@ -48,99 +49,239 @@ export class GenericExtractor extends BaseExtractor {
 			linkStyle: 'inlined',
 		});
 
-		// Reglas personalizadas para mejorar la conversión
-		
-		// Preservar bloques de código con su lenguaje
+		// IMPORTANTE: Desactivar el escape de Markdown para evitar problemas
+		turndown.escape = (text: string) => text;
+
+		// REGLA 1: Preservar bloques de código con su lenguaje
 		turndown.addRule('codeBlocks', {
 			filter: (node) => {
-				return node.nodeName === 'PRE' && 
-				       (node as Element).querySelector('code') !== null;
+				if (node.nodeName !== 'PRE') return false;
+				const el = node as Element;
+				return el.querySelector('code') !== null;
 			},
 			replacement: (content, node) => {
-				const codeElement = (node as Element).querySelector('code');
-				let language = '';
+				const el = node as Element;
+				const codeElement = el.querySelector('code');
 				
-				// Intentar detectar el lenguaje
-				const className = codeElement?.className || '';
-				const match = className.match(/language-(\w+)/);
-				if (match) {
-					language = match[1];
+				// Detectar lenguaje de múltiples fuentes
+				let language = '';
+				const className = codeElement?.className || el.className || '';
+				
+				// Patrones comunes de clases de código
+				const patterns = [
+					/language-(\w+)/,
+					/lang-(\w+)/,
+					/(\w+)$/,  // Última palabra de la clase
+				];
+				
+				for (const pattern of patterns) {
+					const match = className.match(pattern);
+					if (match && match[1]) {
+						language = match[1];
+						break;
+					}
 				}
 				
+				// Mapear lenguajes comunes
+				const langMap: Record<string, string> = {
+					'js': 'javascript',
+					'ts': 'typescript',
+					'py': 'python',
+					'sh': 'bash',
+					'shell': 'bash',
+					'yml': 'yaml',
+					'cf': 'yaml',
+					'terraform': 'hcl',
+				};
+				
+				language = langMap[language] || language;
+				
+				// Obtener el código - preferir textContent original
 				const code = codeElement?.textContent || content;
-				return `\n\n\`\`\`${language}\n${code}\n\`\`\`\n\n`;
+				const cleanCode = code.replace(/\n$/, ''); // Quitar último salto
+				
+				return `\n\`\`\`${language}\n${cleanCode}\n\`\`\`\n`;
 			}
 		});
 
-		// Mejorar el manejo de tablas
+		// REGLA 2: Tablas - Conversión robusta
 		turndown.addRule('tables', {
-			filter: 'table',
+			filter: ['table'],
 			replacement: (content, node) => {
 				const table = node as HTMLTableElement;
-				const rows = table.querySelectorAll('tr');
-				if (rows.length === 0) return '';
-
-				let markdown = '\n\n';
+				const rows: string[] = [];
 				
-				rows.forEach((row, index) => {
-					const cells = row.querySelectorAll('td, th');
-					const rowContent = Array.from(cells)
-						.map(cell => cell.textContent?.trim() || '')
-						.join(' | ');
+				// Procesar todas las filas
+				table.querySelectorAll('tr').forEach((row, index) => {
+					const cells: string[] = [];
 					
-					markdown += `| ${rowContent} |\n`;
+					// Extraer celdas (th o td)
+					row.querySelectorAll('th, td').forEach(cell => {
+						// Limpiar el contenido de la celda
+						let text = cell.textContent?.trim() || '';
+						// Escapar pipes en el contenido
+						text = text.replace(/\|/g, '\\|');
+						// Limitar longitud
+						if (text.length > 100) {
+							text = text.substring(0, 97) + '...';
+						}
+						cells.push(text);
+					});
 					
-					// Agregar separador después de la primera fila (header)
-					if (index === 0) {
-						const separator = Array.from(cells)
-							.map(() => '---')
-							.join(' | ');
-						markdown += `| ${separator} |\n`;
+					if (cells.length > 0) {
+						rows.push('| ' + cells.join(' | ') + ' |');
+						
+						// Agregar separador después de la primera fila (header)
+						if (index === 0) {
+							const separator = '| ' + cells.map(() => '---').join(' | ') + ' |';
+							rows.push(separator);
+						}
 					}
 				});
 				
-				return markdown + '\n';
+				if (rows.length === 0) return '';
+				
+				return '\n' + rows.join('\n') + '\n';
 			}
 		});
 
-		// Manejar iframes (videos, etc.)
-		turndown.addRule('iframes', {
-			filter: 'iframe',
+		// REGLA 3: Imágenes con mejor manejo
+		turndown.addRule('images', {
+			filter: 'img',
+			replacement: (content, node) => {
+				const img = node as HTMLImageElement;
+				const src = img.getAttribute('src') || '';
+				const alt = img.alt || '';
+				const title = img.title || '';
+				
+				if (!src) return '';
+				
+				// Si tiene título, incluirlo
+				if (title) {
+					return `![${alt}](${src} "${title}")`;
+				}
+				return `![${alt}](${src})`;
+			}
+		});
+
+		// REGLA 4: Links con mejor manejo
+		turndown.addRule('links', {
+			filter: (node): boolean => {
+				return node.nodeName === 'A' && !!(node as Element).getAttribute('href');
+			},
+			replacement: (content, node) => {
+				const el = node as HTMLAnchorElement;
+				const href = el.getAttribute('href') || '';
+				const title = el.getAttribute('title') || '';
+				let text = content || el.textContent || '';
+				
+				// Limpiar texto
+				text = text.trim();
+				
+				// Si el link está vacío, ignorarlo
+				if (!text && !href) return '';
+				if (!text) return href;
+				
+				// Si es el mismo texto que el href, solo devolver el href
+				if (text === href) return `<${href}>`;
+				
+				if (title) {
+					return `[${text}](${href} "${title}")`;
+				}
+				return `[${text}](${href})`;
+			}
+		});
+
+		// REGLA 5: Videos de YouTube
+		turndown.addRule('youtube', {
+			filter: (node) => {
+				if (node.nodeName !== 'IFRAME') return false;
+				const src = (node as HTMLIFrameElement).src || '';
+				return src.includes('youtube.com') || src.includes('youtu.be');
+			},
 			replacement: (content, node) => {
 				const src = (node as HTMLIFrameElement).src;
-				if (src.includes('youtube.com') || src.includes('youtu.be')) {
-					const videoId = this.extractYouTubeId(src);
-					if (videoId) {
-						return `\n\n[![YouTube Video](https://img.youtube.com/vi/${videoId}/0.jpg)](https://www.youtube.com/watch?v=${videoId})\n\n`;
-					}
+				const videoId = this.extractYouTubeId(src);
+				if (videoId) {
+					return `\n[![YouTube](https://img.youtube.com/vi/${videoId}/0.jpg)](https://www.youtube.com/watch?v=${videoId})\n`;
 				}
-				return `\n\n<iframe src="${src}"></iframe>\n\n`;
+				return '';
 			}
 		});
 
-		// Preservar bloques de cita
+		// REGLA 6: Callouts / Admonitions
 		turndown.addRule('callouts', {
 			filter: (node) => {
 				const el = node as Element;
-				return el.classList?.contains('callout') ||
-				       el.classList?.contains('admonition') ||
-				       el.classList?.contains('alert');
+				const classes = el.className?.toLowerCase() || '';
+				return classes.includes('callout') ||
+				       classes.includes('admonition') ||
+				       classes.includes('alert') ||
+				       el.getAttribute('role') === 'note';
 			},
 			replacement: (content, node) => {
-				const element = node as Element;
-				let type = 'note';
+				const el = node as Element;
+				const classes = el.className?.toLowerCase() || '';
 				
-				// Intentar detectar el tipo de callout
-				if (element.classList.contains('warning') || element.classList.contains('caution')) {
-					type = 'warning';
-				} else if (element.classList.contains('tip') || element.classList.contains('hint')) {
-					type = 'tip';
-				} else if (element.classList.contains('danger') || element.classList.contains('error')) {
-					type = 'danger';
+				// Detectar tipo
+				let type = 'NOTE';
+				if (classes.includes('warning') || classes.includes('caution') || classes.includes('warn')) {
+					type = 'WARNING';
+				} else if (classes.includes('tip') || classes.includes('hint') || classes.includes('success')) {
+					type = 'TIP';
+				} else if (classes.includes('danger') || classes.includes('error') || classes.includes('critical')) {
+					type = 'DANGER';
+				} else if (classes.includes('info') || classes.includes('information')) {
+					type = 'INFO';
 				}
 				
-				return `\n\n> [!${type.toUpperCase()}]\n> ${content.trim().replace(/\n/g, '\n> ')}\n\n`;
+				// Limpiar contenido
+				const cleanContent = content.trim().replace(/\n/g, '\n> ');
+				
+				return `\n> [!${type}]\n> ${cleanContent}\n`;
 			}
+		});
+
+		// REGLA 7: Blockquotes simples
+		turndown.addRule('blockquotes', {
+			filter: 'blockquote',
+			replacement: (content) => {
+				const cleanContent = content.trim().replace(/\n/g, '\n> ');
+				return `\n> ${cleanContent}\n`;
+			}
+		});
+
+		// REGLA 8: Listas anidadas
+		turndown.addRule('listItems', {
+			filter: 'li',
+			replacement: (content, node, options) => {
+				content = content.trim();
+				if (!content) return '';
+				
+				const prefix = options.bulletListMarker + ' ';
+				const parent = node.parentNode;
+				
+				// Detectar si es lista ordenada
+				if (parent && parent.nodeName === 'OL') {
+					const start = (parent as HTMLOListElement).start || 1;
+					const index = Array.from(parent.children).indexOf(node as Element);
+					return `\n${start + index}. ${content}`;
+				}
+				
+				return `\n${prefix}${content}`;
+			}
+		});
+
+		// REGLA 9: Dividers
+		turndown.addRule('hr', {
+			filter: 'hr',
+			replacement: () => '\n\n---\n\n'
+		});
+
+		// REGLA 10: Eliminar elementos no deseados
+		turndown.addRule('removeScripts', {
+			filter: ['script', 'style', 'nav', 'header', 'footer', 'aside'],
+			replacement: () => ''
 		});
 
 		return turndown;
@@ -152,7 +293,8 @@ export class GenericExtractor extends BaseExtractor {
 	private extractYouTubeId(url: string): string | null {
 		const patterns = [
 			/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
-			/youtube\.com\/watch\?.*v=([^&\s]+)/
+			/youtube\.com\/watch\?.*v=([^&\s]+)/,
+			/youtu\.be\/([^&\s?]+)/
 		];
 		
 		for (const pattern of patterns) {
@@ -175,42 +317,59 @@ export class GenericExtractor extends BaseExtractor {
 	async extract(doc: Document, url?: string): Promise<ExtractedContent> {
 		await this.loadReadability();
 		
-		// Limpiar el documento
-		const cleanDoc = this.cleanHTML(doc);
+		// PASO 1: Limpiar el documento
+		const cleanDoc = this.cleanHTML(doc.cloneNode(true) as Document);
 		
+		// PASO 2: Pre-procesar HTML para mejorar conversión
+		const htmlContent = cleanDoc.body?.innerHTML || '';
+		const processedHtml = HTMLProcessor.preprocess(htmlContent);
+		
+		// PASO 3: Crear un nuevo documento con el HTML procesado
+		const parser = new DOMParser();
+		const processedDoc = parser.parseFromString(
+			`<!DOCTYPE html><html><body>${processedHtml}</body></html>`, 
+			'text/html'
+		);
+		
+		// PASO 4: Usar Readability si está disponible
 		let title = '';
 		let content = '';
-		let extractedContent = cleanDoc.body?.innerHTML || '';
+		let extractedHtml = processedHtml;
 
-		// Usar Readability si está disponible
 		if (Readability) {
 			try {
 				const reader = new Readability(cleanDoc);
 				const article = reader.parse();
 				
-				if (article) {
+				if (article && article.content) {
 					title = article.title || '';
-					content = this.turndownService.turndown(article.content);
+					extractedHtml = article.content;
 				}
 			} catch (error) {
-				console.warn('[WebImporter] Readability falló, usando fallback:', error);
+				console.warn('[Alchemize] Readability falló, usando fallback:', error);
 			}
 		}
 
-		// Fallback si Readability no funcionó
-		if (!content) {
-			const body = cleanDoc.body || cleanDoc;
-			title = cleanDoc.title || 'Sin título';
-			content = this.turndownService.turndown(body.innerHTML);
-		}
+		// PASO 5: Convertir a Markdown
+		content = this.turndownService.turndown(extractedHtml);
+		
+		// PASO 6: Post-procesar el Markdown
+		content = HTMLProcessor.postprocess(content);
 
-		// Extraer metadatos
+		// PASO 7: Extraer metadatos
 		const author = this.extractAuthor(cleanDoc);
 		const date = this.extractDate(cleanDoc);
 		const tags = this.autoTag(content);
-		const images = this.extractImages(cleanDoc.body || cleanDoc.documentElement);
+		
+		// PASO 8: Extraer y procesar imágenes
+		const images = this.extractImages(processedDoc.body || processedDoc.documentElement);
+		
+		// PASO 9: Si no hay título, extraer del documento
+		if (!title) {
+			title = cleanDoc.title || this.extractTitleFromMarkdown(content) || 'Nota transmutada';
+		}
 
-		// Aplicar transformaciones según el modo de exportación
+		// PASO 10: Aplicar transformaciones según el modo de exportación
 		const processedContent = this.applyExportMode(content, this.exportMode);
 
 		return {
@@ -224,7 +383,7 @@ export class GenericExtractor extends BaseExtractor {
 			metadata: {
 				extractor: this.name,
 				exportMode: this.exportMode,
-				wordCount: content.split(/\s+/).length,
+				wordCount: content.split(/\s+/).filter(w => w.length > 0).length,
 			}
 		};
 	}
@@ -238,14 +397,14 @@ export class GenericExtractor extends BaseExtractor {
 			'meta[property="article:author"]',
 			'.author',
 			'[rel="author"]',
-			'.byline'
+			'.byline',
+			'[class*="author"]'
 		];
 
 		for (const selector of selectors) {
 			const element = doc.querySelector(selector);
 			if (element) {
-				const content = element.getAttribute('content') || 
-				                element.textContent;
+				const content = element.getAttribute('content') || element.textContent;
 				if (content) return content.trim();
 			}
 		}
@@ -260,9 +419,12 @@ export class GenericExtractor extends BaseExtractor {
 		const selectors = [
 			'meta[property="article:published_time"]',
 			'meta[name="publishedDate"]',
+			'meta[name="date"]',
 			'time[datetime]',
 			'.published',
-			'.date'
+			'.date',
+			'[class*="date"]',
+			'[class*="published"]'
 		];
 
 		for (const selector of selectors) {
@@ -278,6 +440,19 @@ export class GenericExtractor extends BaseExtractor {
 			}
 		}
 
+		return undefined;
+	}
+
+	/**
+	 * Extrae el título del Markdown (primer heading)
+	 */
+	private extractTitleFromMarkdown(markdown: string): string | undefined {
+		const h1Match = markdown.match(/^#\s+(.+)$/m);
+		if (h1Match) return h1Match[1].trim();
+		
+		const h2Match = markdown.match(/^##\s+(.+)$/m);
+		if (h2Match) return h2Match[1].trim();
+		
 		return undefined;
 	}
 
@@ -300,7 +475,6 @@ export class GenericExtractor extends BaseExtractor {
 	 * Formatea el contenido para modo estudio
 	 */
 	private formatForStudy(content: string): string {
-		// Agregar sección de resumen al principio
 		const summary = this.generateSummary(content);
 		
 		return `## 📝 Resumen\n\n${summary}\n\n---\n\n${content}\n\n---\n\n## 🤔 Preguntas de Repaso\n\n- [ ] ¿Cuál es el concepto principal?\n- [ ] ¿Cuáles son los puntos clave?\n- [ ] ¿Cómo se aplica esto en la práctica?\n`;
@@ -310,7 +484,6 @@ export class GenericExtractor extends BaseExtractor {
 	 * Formatea el contenido para modo flashcards
 	 */
 	private formatForFlashcards(content: string): string {
-		// Extraer posibles preguntas/respuestas de los encabezados
 		const lines = content.split('\n');
 		let flashcards = '';
 		let currentSection = '';
@@ -328,16 +501,15 @@ export class GenericExtractor extends BaseExtractor {
 	}
 
 	/**
-	 * Genera un resumen simple del contenido (primeros párrafos)
+	 * Genera un resumen simple del contenido
 	 */
 	private generateSummary(content: string): string {
 		const paragraphs = content
 			.split('\n\n')
-			.filter(p => p.trim() && !p.startsWith('#') && !p.startsWith('```'));
+			.filter(p => p.trim() && !p.startsWith('#') && !p.startsWith('```') && !p.startsWith('|'));
 		
 		if (paragraphs.length === 0) return 'No hay contenido para resumir.';
 		
-		// Tomar los primeros 2-3 párrafos o un máximo de caracteres
 		let summary = '';
 		let charCount = 0;
 		const maxChars = 500;

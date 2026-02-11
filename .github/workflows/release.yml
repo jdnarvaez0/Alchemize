@@ -1,0 +1,62 @@
+name: Release Alchemize Plugin
+
+on:
+  push:
+    # Se ejecuta cuando creas un tag que empieza con 'v' (ej: v1.0.0)
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout del código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Setup de Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # 3. Instalar dependencias
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Compilar el plugin
+      - name: Build plugin
+        run: npm run build
+
+      # 5. Crear Release y subir archivos
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          # Usa el tag que disparó el workflow
+          tag_name: ${{ github.ref_name }}
+          name: "⚗️ Alchemize ${{ github.ref_name }}"
+          body: |
+            ## ⚗️ Nueva versión de Alchemize
+
+            ### 📦 Archivos incluidos:
+            - `main.js` - Plugin compilado
+            - `manifest.json` - Metadata
+            - `styles.css` - Estilos
+
+            ### 📖 Documentación:
+            Ver [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+
+            ### 🧪 Cambios:
+            Ver [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+
+            ---
+            **Instalación manual:** Descarga los archivos y cópialos a `.obsidian/plugins/alchemize/`
+          files: |
+            main.js
+            manifest.json
+            styles.css
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
